@@ -1,0 +1,82 @@
+
+;***********************************************************
+;   Trace Setup
+;   Parameter: 1. Debug port mode
+;                 Can be "JTAG" or "SWD"
+;              2. Trace port mode
+;                 Can be "NONE" or "ETM".
+;                 "ETM" is only allowed if there is a CombiProbe.
+;
+;   Example:   DO lpc1700-setuptrace "JTAG" "ETM"
+;***********************************************************
+    LOCAL &dpmode
+    LOCAL &tracemode
+
+    ENTRY &dpmode &tracemode
+
+    LOCAL &havetrace
+    &havetrace=0
+
+
+    if ("&tracemode"=="ETM")
+    (
+        IF Combiprobe()
+        (
+            ;Enable TRACE pins via PINSEL10 register
+            d.s SD:0x4002C028 %LONG 0x00000008  ;P2_2...P2_6 = TRACE
+
+            Trace.method CAnalyzer
+
+            ITM.PortSize 4
+            ITM.PortMode Continuous
+;            ITM.IT ON
+;            ITM.CYCLETRACE OFF
+
+            ETM.Trace ON
+            ETM.ON
+
+            &havetrace=1
+        )
+        else
+        (
+            print "CombiProbe required for ETM!"
+        )
+    )
+    else
+    (
+    )
+
+    ;Show trace windows
+    ;(note that CombiProbe has its own command, but not sure if they are really
+    ;any different from the normal TRACE commands)
+    if (&havetrace!=0)
+    (
+        if CombiProbe()
+        (
+            CA.Chart.Symbol /Track
+            CA.List /Track
+        )
+    )
+
+    ;Extra CombiProbe initialization
+    IF Combiprobe()
+    (
+        ;Enable SWO trace if possible
+        if "&dpmode"=="SWD"
+        (
+            ITM.PortSize SWV
+            ITM.PortMode NRZ/4
+            ITM.IT ON                           ;Interrupt tracing
+            ITM.DT OFF                          ;Data tracing
+        )
+
+        CAnalyzer.Init
+        CAnalyzer.THRESHOLD 1.65
+;        CAnalyzer.ExportClock &pllfreq
+        CAnalyzer.ExportClock 64MHz
+;        CAnalyzer.WRITE itm.log /ChannelID 0.
+    )
+
+enddo
+
+

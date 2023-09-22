@@ -1,0 +1,73 @@
+
+;***********************************************************
+;   Initialze (bring up) the system
+;   Parameter: 1. Device name
+;              2. Debug port mode
+;                 Can be "JTAG" or "SWD"
+;
+;   Example:   DO lpc1700-initialize LPC1768 JTAG
+;***********************************************************
+    LOCAL &devtype
+    LOCAL &dpmode
+
+    ENTRY &devtype &dpmode
+
+
+System.Reset
+
+if string.mid("&devtype",1.,7.)=="devtype"
+(
+    print "Default type selected: LPC1768"
+    &devtype="LPC1768"
+)
+
+
+; First of all setup CPU
+sys.cpu &devtype
+
+if ("&dpmode"=="SWD")
+(
+    sys.config swdp on
+)
+else
+(
+    sys.config swdp off
+)
+
+RADIX.Hex
+
+SYStem.Option TURBO OFF
+SYStem.Option BigEndian OFF
+SYStem.Option IFEN OFF
+SYStem.Option DBGACK ON
+SYStem.Option DisMode AUTO
+
+SYStem.Option ResBreak OFF
+SYStem.Option EnReset ON
+SYStem.Option WaitReset OFF
+SYStem.Option TRST ON               ;OFF
+SYStem.Option LOCKRES OFF
+SYStem.Option NOIRCHECK ON
+SYStem.MemAccess DAP
+SYStem.Option DUALPORT ON
+SYStem.JtagClock 500kHz
+
+SYStem.MultiCore IRPRE 0.
+SYStem.MultiCore DRPRE 0.
+
+if CombiProbe()
+(
+    SYSTEM.CONFIG CONNECTOR MIPI20T
+)
+
+SYStem.Up
+
+SETUP.IMASKASM ON
+SETUP.IMASKHLL ON
+
+; MEMMAP: User flash
+DATA.Set 0x400FC040 %Long 1.
+
+;Return TRUE if system is up
+enddo (SYSTEM.MODE()>5)
+

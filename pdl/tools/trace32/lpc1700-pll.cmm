@@ -1,0 +1,91 @@
+
+;***********************************************************
+;   PLL Setup
+;   Parameter: PLL frequency
+;              Only certain discrete values allowed:
+;              4MHz, 48MHz, 100MHz
+;
+;   Example:   DO lpc1700-pll 100MHz
+;***********************************************************
+    LOCAL &pllfreq
+    ENTRY &pllfreq
+
+
+    local &ok
+    &ok=0
+
+;Safe flash wait states (up to 120 MHz)
+d.s SD:0x400FC000 %LONG 0x0000503A
+
+; Turn off PLL
+;sys.JtagClock 500kHz
+d.s SD:0x400FC080 %LONG 0.      ; PLL0CON: PLL disabled
+d.s SD:0x400FC08C %LONG 0xAA    ; PLL0FEED
+d.s SD:0x400FC08C %LONG 0x55    ; PLL0FEED
+
+; PLL input is IRC
+d.s SD:0x400FC10C %LONG 0.      ; CCLKSEL: Source = IRC
+
+if "&pllfreq"=="4MHz"
+(
+    &ok=1
+)
+
+if "&pllfreq"=="48MHz"
+(
+	;Clock divider = 6 (CCLKCFG)
+	d.s SD:0x400FC104 %LONG 5.
+
+	; PLL config (M=36, N=1)
+	d.s SD:0x400FC084 %LONG 0x00000023
+    d.s SD:0x400FC08C %LONG 0xAA    ; PLL0FEED
+    d.s SD:0x400FC08C %LONG 0x55    ; PLL0FEED
+
+	; Enable PLL
+    d.s SD:0x400FC080 %LONG 1.      ; PLL0CON: PLL disconnected and enabled
+    d.s SD:0x400FC08C %LONG 0xAA    ; PLL0FEED
+    d.s SD:0x400FC08C %LONG 0x55    ; PLL0FEED
+
+	; Connect PLL
+    d.s SD:0x400FC080 %LONG 3.      ; PLL0CON: PLL connected and enabled
+    d.s SD:0x400FC08C %LONG 0xAA    ; PLL0FEED
+    d.s SD:0x400FC08C %LONG 0x55    ; PLL0FEED
+
+	sys.JtagClock 6MHz
+
+	&ok=1
+)
+
+if "&pllfreq"=="100MHz"
+(
+	;Clock divider = 4 (CCLKCFG)
+	d.s SD:0x400FC104 %LONG 3.
+
+	; PLL config (M=50, N=1)
+	d.s SD:0x400FC084 %LONG 0x00000031
+    d.s SD:0x400FC08C %LONG 0xAA    ; PLL0FEED
+    d.s SD:0x400FC08C %LONG 0x55    ; PLL0FEED
+
+	; Enable PLL
+    d.s SD:0x400FC080 %LONG 1.      ; PLL0CON: PLL disconnected and enabled
+    d.s SD:0x400FC08C %LONG 0xAA    ; PLL0FEED
+    d.s SD:0x400FC08C %LONG 0x55    ; PLL0FEED
+
+	; Connect PLL
+    d.s SD:0x400FC080 %LONG 3.      ; PLL0CON: PLL connected and enabled
+    d.s SD:0x400FC08C %LONG 0xAA    ; PLL0FEED
+    d.s SD:0x400FC08C %LONG 0x55    ; PLL0FEED
+
+	sys.JtagClock 6MHz
+
+	&ok=1
+)
+
+if (&ok)==0
+(
+    print "Could not set PLL"
+    return
+)
+
+enddo
+

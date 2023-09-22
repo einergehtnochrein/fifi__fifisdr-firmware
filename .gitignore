@@ -1,0 +1,7 @@
+*.kdev4
+*.directory
+gcc/obj*
+gcc/t32*
+gcc/.depend
+tests/build
+
